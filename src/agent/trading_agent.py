@@ -1,5 +1,6 @@
 """
-Main Trading Agent - Orchestrates Hermes AI + Kraken + ERC-8004
+VANIJ Agent - Main Trading Agent
+Connects Hermes AI + Kraken + ERC-8004
 """
 import os
 import json
@@ -13,125 +14,104 @@ from .risk_router import RiskRouter
 from ..exchange.kraken_client import KrakenClient
 from ..identity.erc8004_identity import ERC8004Identity
 
-load_dotenv()
-
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - VANIJ - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
 
-class TradingAgent:
+class VanijAgent:
+    """VANIJ - AI Trading Agent with On-Chain Identity"""
+    
     def __init__(self):
-        self.hermes = HermesClient()
+        load_dotenv()
+        
+        logger.info("Initializing VANIJ Agent...")
+        
+        # Initialize components
+        self.ai = HermesClient()
         self.kraken = KrakenClient()
-        self.erc8004 = ERC8004Identity()
-        self.risk_router = RiskRouter()
+        self.risk = RiskRouter()
+        self.identity = ERC8004Identity()
         
-        self.wallet_address = self.erc8004.account.address if self.erc8004.account else None
-        logger.info(f"Trading Agent initialized. Wallet: {self.wallet_address}")
+        self.name = "VANIJ"
+        self.version = "1.0.0"
+        self.is_running = False
         
-    def get_market_data(self, pair: str = "XBTUSD") -> dict:
-        """Fetch market data from Kraken"""
-        try:
-            ticker = self.kraken.get_ticker(pair)
-            ohlc = self.kraken.get_ohlc(pair, interval=60)  # 1h candles
-            balance = self.kraken.get_balance()
-            
-            return {
-                "pair": pair,
-                "ticker": ticker,
-                "ohlc": ohlc[-10:],  # Last 10 candles
-                "balance": balance,
-                "timestamp": datetime.now().isoformat()
-            }
-        except Exception as e:
-            logger.error(f"Error fetching market data: {e}")
-            return {}
+        logger.info(f"{self.name} Agent v{self.version} initialized")
     
-    def get_portfolio(self) -> dict:
-        """Get current portfolio state"""
-        try:
-            balance = self.kraken.get_balance()
-            trade_balance = self.kraken.get_trade_balance()
-            open_orders = self.kraken.get_open_orders()
-            
-            return {
-                "balance": balance,
-                "equity": trade_balance.get("eb", 0),
-                "pnl": trade_balance.get("nl", 0),
-                "open_orders": len(open_orders),
-                "reputation": self.erc8004.get_reputation(self.wallet_address) if self.wallet_address else 0
-            }
-        except Exception as e:
-            logger.error(f"Error fetching portfolio: {e}")
-            return {}
-    
-    def execute_trade(self, decision: dict) -> dict:
-        """Execute a trade decision through risk router"""
-        # Validate with risk router
-        portfolio = self.get_portfolio()
-        risk_check = self.risk_router.validate_trade(decision, portfolio)
-        
-        if not risk_check["approved"]:
-            logger.warning(f"Trade rejected: {risk_check['reason']}")
-            return {"success": False, "reason": risk_check["reason"]}
-        
-        try:
-            # Execute on Kraken
-            result = self.kraken.place_order(
-                pair=decision.get("pair", "XBTUSD"),
-                type_=decision.get("action", "buy"),
-                volume=risk_check["adjusted_amount"]
-            )
-            
-            logger.info(f"Trade executed: {result}")
-            return {"success": True, "result": result}
-            
-        except Exception as e:
-            logger.error(f"Trade execution failed: {e}")
-            return {"success": False, "reason": str(e)}
-    
-    def run_cycle(self):
-        """Run one trading cycle"""
-        logger.info("=== Trading Cycle Started ===")
+    def analyze_and_trade(self) -> dict:
+        """Main trading cycle"""
+        logger.info("Starting trading cycle...")
         
         # 1. Get market data
-        market_data = self.get_market_data()
-        portfolio = self.get_portfolio()
+        market_data = self.kraken.get_market_data()
+        logger.info(f"Market data: {len(market_data)} pairs")
         
-        # 2. Ask Hermes for decision
-        decision = self.hermes.analyze_market(market_data, portfolio)
-        logger.info(f"Hermes decision: {decision}")
+        # 2. Get portfolio status
+        portfolio = self.kraken.get_balance()
+        logger.info(f"Portfolio: {portfolio}")
         
-        # 3. Execute if approved
-        if decision.get("action") != "hold":
-            result = self.execute_trade(decision)
-            
-            # 4. Record to ERC-8004 if successful
-            if result.get("success"):
-                pnl_sats = int(portfolio.get("pnl", 0) * 100000)  # Convert to sats
-                self.erc8004.record_trade(self.wallet_address, pnl_sats)
+        # 3. Build context for AI
+        context = {
+            "market_data": market_data,
+            "portfolio": portfolio,
+            "timestamp": datetime.now().isoformat(),
+            "agent_name": self.name
+        }
         
-        logger.info("=== Trading Cycle Complete ===")
+        # 4. AI makes decision
+        decision = self.ai.make_decision(context)
+        logger.info(f"AI Decision: {decision}")
+        
+        # 5. Risk check
+        if not self.risk.check_risk(decision):
+            logger.warning("Risk check failed - trade rejected")
+            return {"status": "rejected", "reason": "risk_check_failed"}
+        
+        # 6. Execute trade
+        result = self.kraken.execute_trade(decision)
+        logger.info(f"Trade result: {result}")
+        
+        # 7. Update on-chain reputation
+        if result.get("success"):
+            self.identity.record_trade(result)
+        
+        return result
     
     def run(self, interval_seconds: int = 300):
-        """Run trading agent continuously"""
-        logger.info(f"Starting trading loop (interval: {interval_seconds}s)")
+        """Run agent continuously"""
+        self.is_running = True
+        logger.info(f"Agent running - cycle every {interval_seconds}s (Ctrl+C to stop)")
         
-        while True:
+        while self.is_running:
             try:
-                self.run_cycle()
+                self.analyze_and_trade()
                 time.sleep(interval_seconds)
             except KeyboardInterrupt:
-                logger.info("Trading agent stopped by user")
-                break
+                logger.info("Shutting down...")
+                self.is_running = False
             except Exception as e:
-                logger.error(f"Error in trading loop: {e}")
-                time.sleep(60)  # Wait before retry
+                logger.error(f"Error: {e}")
+                time.sleep(60)
+    
+    def run_cycle(self):
+        """Run single cycle"""
+        return self.analyze_and_trade()
+    
+    def get_status(self) -> dict:
+        """Get agent status"""
+        return {
+            "name": self.name,
+            "version": self.version,
+            "running": self.is_running,
+            "ai_connected": self.ai.is_connected(),
+            "kraken_connected": self.kraken.is_connected(),
+            "identity_registered": self.identity.is_registered()
+        }
 
 
 if __name__ == "__main__":
-    agent = TradingAgent()
-    agent.run(interval_seconds=300)  # Run every 5 minutes
+    agent = VanijAgent()
+    print(json.dumps(agent.get_status(), indent=2))

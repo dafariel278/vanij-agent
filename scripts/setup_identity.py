@@ -1,36 +1,37 @@
 #!/usr/bin/env python3
 """
-Setup & register ERC-8004 identity
+VANIJ Agent - Setup ERC-8004 Identity
 """
 import sys
-sys.path.insert(0, 'src')
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from identity.erc8004_identity import ERC8004Identity
-from web3 import Web3
+from src.identity.erc8004_identity import ERC8004Identity
+
 
 def main():
-    print("ERC-8004 Identity Setup")
-    print("=" * 40)
+    print("=" * 50)
+    print("  VANIJ - ERC-8004 Identity Setup")
+    print("=" * 50)
+    print()
     
     identity = ERC8004Identity()
     
-    if not identity.account:
-        print("ERROR: No wallet configured. Set WALLET_PRIVATE_KEY in .env")
-        sys.exit(1)
-    
-    print(f"Wallet: {identity.account.address}")
-    print(f"Contract: {identity.contract_address}")
-    
     # Check if already registered
-    if identity.is_registered(identity.account.address):
-        print("Agent is already registered!")
-        score = identity.get_reputation(identity.account.address)
-        print(f"Reputation score: {score}")
+    if identity.is_registered():
+        print("✓ Agent already registered on ERC-8004")
+        print(f"  Agent ID: {identity.get_agent_id()}")
+        print(f"  Reputation: {identity.get_reputation()}")
     else:
-        print("Registering agent...")
+        print("→ Registering new agent...")
         tx_hash = identity.register()
-        print(f"Registration tx: {tx_hash}")
-        print("Wait for confirmation, then check reputation")
+        print(f"✓ Registered! TX: {tx_hash}")
+    
+    print()
+    print("Identity Info:")
+    print(f"  Address: {identity.get_address()}")
+    print(f"  Chain: Ethereum")
+
 
 if __name__ == "__main__":
     main()
