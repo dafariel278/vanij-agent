@@ -1,97 +1,168 @@
-# VANIJ AGENT
+# VANIJ - Trustless AI Trading Agent
 
-**AI Trading Agent — Kraken + ERC-8004 Identity | lablab.ai AI Trading Agents Hackathon**
+> **V**erifiable **A**utonomous **N**etwork **I**ntelligent **J**udge
 
-> *Vanij (वणिज) — Sanskrit for "trade, commerce"*
+AI Trading Agent yang menggabungkan **Kraken CLI** untuk eksekusi trading dan **ERC-8004** untuk identity, reputation, dan validation layer.
 
-## Overview
+## 🏆 Why VANIJ is Different
 
-An AI-powered trading agent that combines:
-- **Hermes 70B** (Nous Research) as the AI brain
-- **Kraken CLI** for exchange execution
-- **ERC-8004** for on-chain agent identity and reputation
+| Feature | Description |
+|---------|-------------|
+| **Trustless Identity** | On-chain agent identity via ERC-8004 |
+| **Verifiable Execution** | Every trade attested and auditable |
+| **Reputation Building** | Automatic trust score from trading outcomes |
+| **Risk Guardrails** | On-chain circuit breakers, position limits |
+| **Multi-Strategy AI** | Arbitrage, sentiment, correlation trading |
+| **Cross-Market Analysis** | Multi-asset correlation detection |
 
-## Architecture
+## 🏗️ Architecture
 
 ```
-┌─────────────────┐     ┌──────────────┐     ┌─────────────┐
-│  Hermes 70B     │────▶│  Risk Router  │────▶│ Kraken CLI  │
-│  (AI Brain)     │     │  (Limits)     │     │ (Execution) │
-└─────────────────┘     └──────────────┘     └─────────────┘
-        │                                            │
-        └──────────────────┬─────────────────────────┘
-                           ▼
-                   ┌──────────────────┐
-                   │   ERC-8004       │
-                   │   Identity       │
-                   │   On-Chain       │
-                   └──────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      VANIJ Agent                             │
+├─────────────────────────────────────────────────────────────┤
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐   │
+│  │ Strategy Layer │  │  Risk Layer   │  │ Trust Layer   │   │
+│  │ - Arbitrage   │  │ - Position    │  │ - ERC-8004    │   │
+│  │ - Sentiment   │  │   Limits      │  │ - Attestation  │   │
+│  │ - Correlation │  │ - Stop Loss   │  │ - Reputation  │   │
+│  └───────────────┘  └───────────────┘  └───────────────┘   │
+├─────────────────────────────────────────────────────────────┤
+│  ┌───────────────────────────────────────────────────────┐ │
+│  │              Kraken CLI Integration                    │ │
+│  │  - Market Data  - Order Execution  - Paper Trading    │ │
+│  └───────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## Strategy
-
-| Component | Description |
-|-----------|-------------|
-| **AI Brain** | Hermes 70B analyzes market data, identifies patterns, makes trading decisions |
-| **Risk Router** | Enforces position limits, max leverage, daily loss caps, circuit breakers |
-| **Execution** | Kraken CLI executes trades with precision |
-| **Identity** | ERC-8004 provides on-chain agent identity and verifiable reputation |
-
-## Risk Management
-
-- Position size limits
-- Max leverage enforcement (configurable)
-- Daily loss caps with automatic trading halt
-- Circuit breakers on consecutive losses
-- Drawdown monitoring
-
-## Setup
+## 📦 Installation
 
 ```bash
-# Clone
-git clone https://github.com/buffedgecko/vanij-agent.git
+# Clone repository
+git clone https://github.com/dafariel278/vanij-agent.git
 cd vanij-agent
 
 # Install dependencies
-pip install -r requirements.txt
+bun install
 
-# Configure
+# Setup environment
 cp .env.example .env
 # Edit .env with your API keys
 
-# Run
-python scripts/run_agent.py
+# Run agent
+bun run start
 ```
 
-## Environment Variables
+## 🔑 Required Setup
+
+### 1. Kraken API Keys
+1. Go to [Kraken API Settings](https://www.kraken.com/u/security/api)
+2. Create new API key with **Read-Only** permissions (for leaderboard verification)
+3. Add to `.env` file
+
+### 2. ERC-8004 Identity
+1. Deploy agent identity on testnet/L2
+2. Register on [early.surge.xyz](https://early.surge.xyz)
+3. Claim sandbox capital
+
+### 3. Environment Variables
 
 ```env
-HERMES_API_KEY=          # Nous Research Hermes API key
-HERMES_BASE_URL=         # Hermes endpoint (default provided)
-KRAKEN_API_KEY=          # Kraken API key
-KRAKEN_API_SECRET=       # Kraken API secret
-ERC8004_RPC_URL=         # Ethereum RPC URL
-WALLET_PRIVATE_KEY=      # Wallet for on-chain identity
-MAX_POSITION_SIZE=1000   # Max position in USD
-MAX_LEVERAGE=2           # Max leverage allowed
-MAX_DAILY_LOSS=100       # Daily loss limit
+# Kraken
+KRAKEN_API_KEY=your_api_key
+KRAKEN_API_SECRET=your_api_secret
+
+# ERC-8004 (testnet)
+AGENT_WALLET_PRIVATE_KEY=your_private_key
+RPC_URL=https://sepolia.infura.io/v3/your_key
+IDENTITY_REGISTRY_ADDRESS=0x...
+
+# Risk Parameters
+MAX_POSITION_SIZE_USD=1000
+MAX_DAILY_LOSS_USD=100
+MAX_LEVERAGE=2
 ```
 
-## Scripts
+## 🚀 Quick Start
 
-| Script | Purpose |
-|--------|---------|
-| `run_agent.py` | Start the trading agent |
-| `setup_identity.py` | Register agent on ERC-8004 |
-| `backtest.py` | Backtest strategy on historical data |
+```bash
+# Paper trading mode (no real money)
+bun run start:paper
 
-## Stack
+# Live trading (requires real API keys)
+bun run start:live
 
-- **AI**: Hermes 70B (Nous Research)
-- **Exchange**: Kraken
-- **Blockchain**: ERC-8004 (Ethereum)
-- **Language**: Python 3.11+
+# Run tests
+bun run test
 
-## License
+# Build for production
+bun run build
+```
 
-MIT
+## 📊 Trading Strategies
+
+### 1. Arbitrage Hunter
+Detects price discrepancies across markets and executes risk-free arbitrage.
+
+### 2. Sentiment Fusion
+Combines on-chain metrics with social sentiment analysis for directional trades.
+
+### 3. Correlation Trading
+Identifies correlated assets and trades when correlation breaks down.
+
+### 4. Risk-Adaptive Position Sizing
+Adjusts position size based on volatility, win rate, and drawdown.
+
+## 🔐 Risk Management
+
+| Guardrail | Default |
+|-----------|---------|
+| Max Position Size | $1,000 USD |
+| Max Daily Loss | $100 USD |
+| Max Leverage | 2x |
+| Circuit Breaker | 5% drawdown |
+| Position Timeout | 24 hours |
+
+## 📈 Performance Tracking
+
+VANIJ automatically:
+- Logs all trades on-chain via ERC-8004
+- Builds reputation score from PnL
+- Emits validation artifacts for each decision
+- Publishes to hackathon leaderboard
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+bun test
+
+# Run specific strategy test
+bun test tests/arbitrage.test.ts
+
+# Run with coverage
+bun test --coverage
+```
+
+## 📝 Hackathon Submission Checklist
+
+- [ ] Public GitHub repository
+- [ ] Demo video (3-5 minutes)
+- [ ] Slide presentation
+- [ ] README with setup instructions
+- [ ] Live demo URL
+- [ ] Project registered at early.surge.xyz
+- [ ] Kraken API key submitted for leaderboard
+- [ ] ERC-8004 identity deployed
+
+## 📜 License
+
+MIT License - See [LICENSE](LICENSE) for details.
+
+## 🤝 Contributing
+
+This project is for the Lablab.ai AI Trading Agents hackathon.
+
+---
+
+Built with ❤️ for the AI Trading Agents Hackathon 2026
